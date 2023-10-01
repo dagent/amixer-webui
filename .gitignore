@@ -9,3 +9,7 @@
 !/production/deb-package/DEBIAN/
 /production/deb-package/DEBIAN/control
 /production/deb-package/DEBIAN/md5sums
+
+# added by DG
+venv
+
