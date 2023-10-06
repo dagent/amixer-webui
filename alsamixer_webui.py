@@ -88,6 +88,30 @@ class Handler(Flask):
 
         return cards
 
+    def __get_capture_ids__(self):
+        '''DG adds -- generate list of "non-playback" numid's to filter interfaces'''
+        try:
+            amixer_controls = Popen(self.__get_amixer_command__() + ["controls"], stdout=PIPE)
+            amixer_captures = Popen(["grep", "-v", "-i", "playback"], stdin=amixer_controls.stdout, stdout=PIPE).communicate()[0]
+        except OSError:
+            return []
+        ids = []
+        print(f'\n{amixer_captures}\n')
+        ac = self.__decode_string(amixer_captures).split("\n")
+        print(f'\n{ac}\n')
+
+        for i in ac:
+            numid = i.split(",")[0].replace("numid=", "")
+            print(f'numid = {numid}')
+            try:
+                ids.append(int(numid))
+            except:
+                print(f'Got invalid numid')
+
+        print(f'\n{ids}\n')
+        return ids
+        
+
     def __get_controls__(self):
         try:
             amixer = Popen(self.__get_amixer_command__(), stdout=PIPE)
@@ -100,6 +124,8 @@ class Handler(Flask):
             return []
 
         interfaces = []
+        capture_ids = self.__get_capture_ids__()
+        print(f'\ncapture_ids = {capture_ids}\n')
         for i in amixer_contents.split("numid=")[1:]:
             lines = i.split("\n")
 
@@ -110,6 +136,12 @@ class Handler(Flask):
                 "type": lines[1].split(",")[0].replace("  ; type=", ""),
                 "access": lines[1].split(",")[1].replace("access=", ""),
             }
+
+            if interface["id"] not in capture_ids:
+                print(f'not in capture_ids: {interface["id"]}')
+                continue
+
+            print(f'in capture_ids: {interface["id"]}')
 
             if interface["type"] == "ENUMERATED":
                 items = {}
@@ -150,6 +182,8 @@ class Handler(Flask):
                     interface.pop("channels", None)
 
             interfaces.append(interface)
+
+        print(f'interfaces: {interfaces}')
 
         return interfaces
 
