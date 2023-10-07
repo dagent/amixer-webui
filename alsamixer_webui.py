@@ -24,10 +24,11 @@ except ImportError:
     import configparser as ConfigParser
 
 
-CONFIG_FILE = '/etc/amixer-webui.conf'
+#CONFIG_FILE = '/etc/amixer-webui.conf'
+CONFIG_FILE =  sys.path[0] + '/' + 'amixer-webui.conf'
 DEFAULT_HOST = '0.0.0.0'
 DEFAULT_PORT = '8080'
-
+#CAPTURE_ONLY = False
 
 class Handler(Flask):
 
@@ -89,30 +90,39 @@ class Handler(Flask):
         return cards
 
     def __get_capture_ids__(self):
-        '''DG adds -- generate list of "non-playback" numid's to filter interfaces'''
+        '''Generate list of "non-playback" numid's to filter interfaces'''
         try:
             amixer_controls = Popen(self.__get_amixer_command__() + ["controls"], stdout=PIPE)
             amixer_captures = Popen(["grep", "-v", "-i", "playback"], stdin=amixer_controls.stdout, stdout=PIPE).communicate()[0]
         except OSError:
             return []
+
         ids = []
-        print(f'\n{amixer_captures}\n')
         ac = self.__decode_string(amixer_captures).split("\n")
-        print(f'\n{ac}\n')
 
         for i in ac:
             numid = i.split(",")[0].replace("numid=", "")
-            print(f'numid = {numid}')
-            try:
-                ids.append(int(numid))
+            # numid is occasionally ""
+            try:        
+                ids.append(int(numid))  
             except:
-                print(f'Got invalid numid')
+                pass
 
-        print(f'\n{ids}\n')
         return ids
         
 
     def __get_controls__(self):
+
+        # Convoluted checking on CAPTURE_ONLY 
+        try:
+            if self.config['CAPTURE_ONLY'] is True:
+                CAPTURE_ONLY = True
+            else:
+                CAPTURE_ONLY = False
+        except Exception as e:
+            print(f'no capture_only configuration')
+            CAPTURE_ONLY = False
+
         try:
             amixer = Popen(self.__get_amixer_command__(), stdout=PIPE)
             amixer_channels = Popen(["grep", "-e", "control", "-e", "channels"], stdin=amixer.stdout, stdout=PIPE)
@@ -125,7 +135,6 @@ class Handler(Flask):
 
         interfaces = []
         capture_ids = self.__get_capture_ids__()
-        print(f'\ncapture_ids = {capture_ids}\n')
         for i in amixer_contents.split("numid=")[1:]:
             lines = i.split("\n")
 
@@ -137,11 +146,8 @@ class Handler(Flask):
                 "access": lines[1].split(",")[1].replace("access=", ""),
             }
 
-            if interface["id"] not in capture_ids:
-                print(f'not in capture_ids: {interface["id"]}')
+            if CAPTURE_ONLY is True and interface["id"] not in capture_ids:
                 continue
-
-            print(f'in capture_ids: {interface["id"]}')
 
             if interface["type"] == "ENUMERATED":
                 items = {}
@@ -182,8 +188,6 @@ class Handler(Flask):
                     interface.pop("channels", None)
 
             interfaces.append(interface)
-
-        print(f'interfaces: {interfaces}')
 
         return interfaces
 
@@ -342,13 +346,22 @@ def set_server_header(response):
 
 
 def main():
+
+    global CAPTURE_ONLY
+    try:
+        CAPTURE_ONLY
+    except:
+        CAPTURE_ONLY = False
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--host", type=str)
     parser.add_argument("-p", "--port", type=int)
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("--capture_only", action="store_true" , help='Only present capture devices.')
     args = parser.parse_args()
 
     if os.path.isfile(CONFIG_FILE):
+        print(f'Using Config file "{CONFIG_FILE}"')
         config = ConfigParser.RawConfigParser()
         config.read(CONFIG_FILE)
 
@@ -360,14 +373,31 @@ def main():
             if is_digit(port):
                 args.port = int(port)
 
+        if args.capture_only is True:
+            CAPTURE_ONLY = True
+        elif config.get('amixer-webui', 'CAPTURE_ONLY') == "" :
+            pass
+        else:
+            CAPTURE_ONLY = config.get('amixer-webui', 'CAPTURE_ONLY') 
+
+    else:
+        print(f'Config file "{CONFIG_FILE}" not found, using defaults.')
+
     if args.host == "":
         args.host = DEFAULT_HOST
 
     if args.port is None:
         args.port = DEFAULT_PORT
 
+    if CAPTURE_ONLY is True:
+        app.config['CAPTURE_ONLY'] = True
+    else:
+        app.config['CAPTURE_ONLY'] = False
+
+    appargs = { 'host': args.host, 'port': args.port, 'debug': args.debug}
+
     try:
-        app.run(**vars(args))
+        app.run(**appargs)
     except socket.error as e:
         if e.errno == errno.EPIPE:
             main()
