@@ -375,10 +375,8 @@ def main():
 
         if args.capture_only is True:
             CAPTURE_ONLY = True
-        elif config.get('amixer-webui', 'CAPTURE_ONLY') == "" :
-            pass
-        else:
-            CAPTURE_ONLY = config.get('amixer-webui', 'CAPTURE_ONLY') 
+        elif config.get('amixer-webui', 'CAPTURE_ONLY') == "True" :
+            CAPTURE_ONLY = True
 
     else:
         print(f'Config file "{CONFIG_FILE}" not found, using defaults.')
