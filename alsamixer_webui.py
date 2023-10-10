@@ -24,8 +24,7 @@ except ImportError:
     import configparser as ConfigParser
 
 
-#CONFIG_FILE = '/etc/amixer-webui.conf'
-CONFIG_FILE =  sys.path[0] + '/' + 'amixer-webui.conf'
+DEFAULT_CONFIG_FILE = '/etc/amixer-webui.conf'
 DEFAULT_HOST = '0.0.0.0'
 DEFAULT_PORT = '8080'
 #CAPTURE_ONLY = False
@@ -354,16 +353,19 @@ def main():
         CAPTURE_ONLY = False
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--host", type=str)
-    parser.add_argument("-p", "--port", type=int)
+    parser.add_argument("-l", "--host", type=str, help=f'Default {DEFAULT_HOST}')
+    parser.add_argument("-p", "--port", type=int, help=f'Default {DEFAULT_PORT}')
+    parser.add_argument("-c", "--config_file", type=str, default=DEFAULT_CONFIG_FILE, help=f'Defaults to {DEFAULT_CONFIG_FILE}')
     parser.add_argument("-d", "--debug", action="store_true")
-    parser.add_argument("--capture_only", action="store_true" , help='Only present capture devices.')
+    parser.add_argument("--capture_only", action="store_true" , help='Only present/control capture devices.')
     args = parser.parse_args()
 
-    if os.path.isfile(CONFIG_FILE):
-        print(f'Using Config file "{CONFIG_FILE}"')
+
+
+    if os.path.isfile(args.config_file):
+        print(f'Using Config file "{args.config_file}"')
         config = ConfigParser.RawConfigParser()
-        config.read(CONFIG_FILE)
+        config.read(args.config_file)
 
         if args.host is None:
             args.host = config.get('amixer-webui', 'host')
@@ -379,7 +381,7 @@ def main():
             CAPTURE_ONLY = True
 
     else:
-        print(f'Config file "{CONFIG_FILE}" not found, using defaults.')
+        print(f'Config file "{args.config_file}" not found, using defaults.')
 
     if args.host == "":
         args.host = DEFAULT_HOST
