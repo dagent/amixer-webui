@@ -375,13 +375,15 @@ def main():
             if is_digit(port):
                 args.port = int(port)
 
-        if args.capture_only is True:
-            CAPTURE_ONLY = True
-        elif config.get('amixer-webui', 'CAPTURE_ONLY') == "True" :
+        if config.get('amixer-webui', 'CAPTURE_ONLY') == "True" :
             CAPTURE_ONLY = True
 
     else:
         print(f'Config file "{args.config_file}" not found, using defaults.')
+
+    if args.capture_only is True:
+        CAPTURE_ONLY = True
+    print(f'CAPTURE_ONLY set to {CAPTURE_ONLY}')
 
     if args.host == "":
         args.host = DEFAULT_HOST
