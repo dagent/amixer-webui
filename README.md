@@ -1,3 +1,15 @@
+## addCaptureOnlyArgument branch
+This branch, from a fork ~2023-08, adds a couple command-line arguments and a config file parameter to only process *capture* devices.
+
+1. argument parsing in general added
+2. ability to use different config file (`-c CONFIG_FILE`)
+3. `--capture_only` argument
+4. `CAPTURE_ONLY` parameter (`True|False`) in config file
+5. Tested on a python v3.6, and unlikely to work for anything previous
+
+Original README follows.
+
+
 # ALSA Mixer WebUI
 
 [![Build Status](https://travis-ci.org/JiriSko/amixer-webui.svg?branch=master)](https://travis-ci.org/JiriSko/amixer-webui)
